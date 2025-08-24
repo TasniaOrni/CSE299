@@ -1,0 +1,1483 @@
+Got it! Let’s structure this Academic Scheduler app clearly, listing features, database schemas, UI/UX layout (dashboard + sidebar), and how it integrates with Google Calendar.
+
+✅ Core Features
+Authentication & User Roles
+
+
+Only NSU email login (via Google OAuth).
+
+
+Users choose role: Student, TA, RA, Lab Instructor, Teacher.
+
+
+Special roles have extra permissions (e.g., setting office hours, courses they manage).
+
+
+Google Calendar Integration
+
+
+Syncs with user’s Google Calendar.
+
+
+Daily summary email of events (classes, assignments, exams).
+
+
+Real-time calendar updates when events are added/edited.
+
+
+Event Management
+
+
+Students upload:
+
+
+Class schedules (auto-repeats for semester duration)
+
+
+Exam dates (single-day event, marked blue)
+
+
+Assignment deadlines (daily reminders until done)
+
+
+Teachers/TA/Lab Instructors set:
+
+
+Office hours
+
+
+Courses they are responsible for
+
+
+Room locations
+
+
+Anyone can search by email, course code, or role to find a teacher/TA schedule.
+
+
+Smart Reminders
+
+
+Daily reminders for assignments until completed.
+
+
+Early reminders for exams (e.g., 2 days before).
+
+
+Search & Discovery
+
+
+Search by course → see instructor office hours, upcoming deadlines.
+
+
+Search by teacher/TA email → see their availability.
+
+
+Calendar View
+
+
+Month/Week view showing:
+
+
+Classes (repeated events)
+
+
+Exams (blue)
+
+
+Assignments (highlighted, marked when done)
+
+
+Notification System
+
+
+Email & web notifications for:
+
+
+Upcoming deadlines
+
+
+Exam alerts
+
+
+Office hour changes
+
+
+
+✅ Tech Stack
+Backend: FastAPI
+
+
+Database: PostgreSQL
+
+
+Auth: Google OAuth restricted to @nsu.edu domain
+
+
+Calendar API: Google Calendar API
+
+
+Frontend: React (or Next.js for better SSR)
+
+
+Notifications: Celery + Redis (for scheduled tasks & reminders)
+
+
+
+✅ Database Schema
+Here’s a suggested schema:
+users
+column
+type
+notes
+id
+UUID
+Primary key
+email
+TEXT (unique)
+Must end with @nsu.edu
+name
+TEXT
+Full name
+role
+ENUM(student, ta, ra, lab_instructor, teacher)
+User role
+google_id
+TEXT
+Google OAuth ID
+calendar_token
+TEXT
+For syncing events
+created_at
+TIMESTAMP
+
+
+
+
+courses
+column
+type
+notes
+id
+UUID
+Primary key
+code
+TEXT
+e.g., CSE115
+name
+TEXT
+Course title
+semester
+TEXT
+e.g., Spring 2025
+instructor
+UUID (FK)
+Linked to users.id
+
+
+office_hours
+column
+type
+notes
+id
+UUID
+Primary key
+user_id
+UUID (FK)
+TA/Instructor who owns this hour
+day
+ENUM(Mon–Sun)
+Day of the week
+start_time
+TIME
+e.g., 14:00
+end_time
+TIME
+e.g., 16:00
+room
+TEXT
+Room number
+
+
+events
+column
+type
+notes
+id
+UUID
+Primary key
+user_id
+UUID (FK)
+Owner
+title
+TEXT
+Class/Exam/Assignment name
+event_type
+ENUM(class, exam, assignment)
+Helps color-coding
+course_id
+UUID (FK)
+If linked to a course
+start_date
+DATE/TIMESTAMP
+Start time
+end_date
+DATE/TIMESTAMP
+End time (or same as start for exam)
+is_completed
+BOOLEAN
+Only for assignments
+google_event_id
+TEXT
+To sync with Google Calendar
+
+
+reminders
+column
+type
+notes
+id
+UUID
+Primary key
+event_id
+UUID (FK)
+Linked to events.id
+remind_time
+TIMESTAMP
+When reminder triggers
+status
+ENUM(pending, sent)
+Reminder status
+
+
+✅ Website Dashboard Layout
+Sidebar
+Dashboard
+
+
+My Calendar
+
+
+My Courses
+
+
+Assignments
+
+
+Exams
+
+
+Office Hours (only for TA/Teacher roles)
+
+
+Search Users/Courses
+
+
+Settings
+
+
+
+Dashboard Main View
+Daily Summary Card
+
+
+“Today you have 2 classes, 1 exam, 1 assignment due”
+
+
+Upcoming Exams
+
+
+Pending Assignments (checklist)
+
+
+Office Hours Today (if applicable)
+
+
+
+Calendar View
+Week/Month toggle
+
+
+Classes → default color
+
+
+Exams → blue
+
+
+Assignments → yellow, strikethrough when completed
+
+
+
+Search View
+Search bar → type course code or email
+
+
+Results:
+
+
+Instructor/TA info + office hours
+
+
+Course schedule
+
+
+Exam/Assignment timeline
+
+
+
+✅ Workflow Example
+Student logs in with NSU email → OAuth verifies domain
+
+
+Student uploads class schedule (repeats weekly for semester)
+
+
+Adds assignments & exams → auto-synced to Google Calendar
+
+
+Gets daily summary email (generated via Celery task)
+
+
+Before exam date → gets reminder
+
+
+TA logs in & sets office hours → visible to students
+
+
+
+✅ Next Steps
+Step 1: Setup FastAPI backend with Google OAuth (domain restriction).
+
+
+Step 2: Define PostgreSQL schema (using SQLAlchemy).
+
+
+Step 3: Implement Google Calendar sync logic.
+
+
+Step 4: Build React frontend with Sidebar + Dashboard.
+
+
+
+
+Got it! If Google Calendar is the primary event manager, then:
+✅ We don’t need Celery + Redis for reminders, because Google Calendar itself will:
+Send email & push notifications for upcoming events
+
+
+Handle daily summaries (Google already has a daily agenda email feature)
+
+
+Sync automatically across devices
+
+
+So the website becomes more of a front-end interface + search/discovery tool, while Google Calendar handles scheduling & reminders.
+✅ Updated Flow
+Users log in → Google OAuth with NSU domain restriction.
+
+
+They create/update events (classes, exams, assignments, office hours) via the website.
+
+
+Events are pushed directly to Google Calendar (with proper color coding & reminders).
+
+
+Google Calendar takes care of notifications, daily summaries, and reminders.
+
+
+Other users can search courses/people → see public events (office hours, course timings).
+
+
+
+✅ What we still need on the backend
+User authentication & role management
+
+
+Database for storing role + course associations (not events themselves, since events live in Google Calendar)
+
+
+Search API (e.g., find instructor → fetch their linked calendar events)
+
+
+Integration layer with Google Calendar API
+
+
+So no extra cron jobs, Celery, or Redis → Google Calendar already handles notifications.
+
+Got it! Since Google Calendar manages all actual events, we’ll keep the PostgreSQL schema minimal, focusing on:
+User authentication & roles
+
+
+Course management & associations
+
+
+Reference links to Google Calendar events (just storing the Google event_id for sync if needed)
+
+
+Here’s the SQLAlchemy model design for FastAPI + PostgreSQL.
+
+✅ SQLAlchemy Models
+from sqlalchemy import (
+    Column, String, Enum, ForeignKey, DateTime, Text, Table
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship, declarative_base
+import uuid
+import enum
+
+Base = declarative_base()
+
+# --- ENUM for roles ---
+class UserRole(str, enum.Enum):
+    student = "student"
+    ta = "ta"
+    ra = "ra"
+    lab_instructor = "lab_instructor"
+    teacher = "teacher"
+
+
+# --- USERS TABLE ---
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    role = Column(Enum(UserRole), nullable=False)
+    google_id = Column(String, nullable=False)  # Google OAuth ID
+    calendar_token = Column(Text, nullable=True)  # For Google Calendar API refresh tokens
+    created_at = Column(DateTime, server_default="NOW()")
+
+    # relationships
+    courses = relationship("Course", secondary="user_courses", back_populates="users")
+
+
+# --- COURSES TABLE ---
+class Course(Base):
+    __tablename__ = "courses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code = Column(String, nullable=False)     # e.g. CSE115
+    name = Column(String, nullable=False)     # e.g. Programming Language I
+    semester = Column(String, nullable=False) # e.g. Spring 2025
+
+    # relationships
+    users = relationship("User", secondary="user_courses", back_populates="courses")
+
+
+# --- MANY-TO-MANY RELATIONSHIP BETWEEN USERS & COURSES ---
+user_courses = Table(
+    "user_courses",
+    Base.metadata,
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")),
+    Column("course_id", UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE")),
+)
+
+
+# --- OPTIONAL: STORE REFERENCES TO GOOGLE EVENTS ---
+class GoogleEvent(Base):
+    __tablename__ = "google_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    google_event_id = Column(String, nullable=False)  # Event ID from Google Calendar API
+    event_type = Column(String, nullable=False)       # class, exam, assignment, office_hour
+    created_at = Column(DateTime, server_default="NOW()")
+
+    user = relationship("User", backref="google_events")
+
+
+✅ What this Schema Does
+Users
+
+
+Stores NSU email, Google OAuth info, and their role.
+
+
+Keeps calendar_token for syncing with Google Calendar API.
+
+
+Courses
+
+
+Keeps course code/name/semester.
+
+
+Linked to users (students enrolled, instructors managing).
+
+
+User-Course Association
+
+
+Lets one user be part of multiple courses.
+
+
+Teachers/TA roles can be managers, students are enrolled.
+
+
+GoogleEvent
+
+
+Optional table to store a reference to Google Calendar event IDs.
+
+
+We don’t store full events (Google is the source of truth).
+
+
+Useful for tracking which events we created via API.
+
+
+
+✅ Minimal API Endpoints
+We’ll need FastAPI routes like:
+Endpoint
+Method
+Description
+/auth/login
+GET
+Google OAuth login (restricted to @nsu.edu)
+/users/me
+GET
+Get current user profile
+/courses/
+POST
+Create a new course (teacher only)
+/courses/
+GET
+List all available courses
+/courses/{id}/enroll
+POST
+Enroll a student in a course
+/calendar/event
+POST
+Create an event in user’s Google Calendar
+/calendar/event/{id}
+DELETE
+Delete an event from Google Calendar
+/search
+GET
+Search by email/course → returns user info + public calendar events
+
+
+✅ How Google Calendar Sync Works
+User logs in → we get a refresh token for Google Calendar API.
+
+
+When they add class/exam/assignment/office hours via our site →
+ ✅ We push it directly to Google Calendar (with color coding).
+
+
+We store the Google event_id in GoogleEvent table for future edits/deletion.
+
+
+Google Calendar itself sends notifications/reminders.
+
+
+
+Got it! Let’s outline ALL possible API endpoints for the Academic Scheduler, covering:
+✅ Authentication & Roles
+ ✅ Course Management
+ ✅ Google Calendar Integration
+ ✅ Search & Discovery
+I’ll group them logically and describe what each does.
+
+✅ 1. Authentication & User Management
+Endpoint
+Method
+Description
+/auth/login
+GET
+Redirects user to Google OAuth login
+/auth/callback
+GET
+Google redirects here → exchange code for tokens → verify NSU email
+/auth/logout
+POST
+Revokes refresh token & logs out user
+/users/me
+GET
+Get logged-in user profile (role, email, name)
+/users/me/role
+PATCH
+Update user role (student, TA, teacher, etc.)
+
+Backend logic
+Restrict login to @nsu.edu
+
+
+Store refresh_token, google_id, role, etc.
+
+
+
+✅ 2. Course Management
+Endpoint
+Method
+Description
+/courses/
+GET
+List all available courses for current semester
+/courses/
+POST
+Create a new course (teachers/TA only)
+/courses/{course_id}
+GET
+Get details of a specific course
+/courses/{course_id}/enroll
+POST
+Enroll current user into a course
+/courses/{course_id}/unenroll
+DELETE
+Remove user from a course
+/courses/{course_id}/members
+GET
+List all students, TA, teacher in a course
+
+Who can do what?
+Teachers/TA → create courses, view enrolled students
+
+
+Students → only enroll/unenroll
+
+
+
+✅ 3. Office Hours Management (for TA/Teacher)
+Endpoint
+Method
+Description
+/office-hours/
+GET
+List all office hours of logged-in user
+/office-hours/
+POST
+Add office hours (with day/time/room)
+/office-hours/{id}
+PATCH
+Update office hour schedule
+/office-hours/{id}
+DELETE
+Delete office hours
+
+These will be synced to Google Calendar as recurring events.
+
+✅ 4. Google Calendar Integration
+Endpoint
+Method
+Description
+/calendar/events
+GET
+List all Google Calendar events for the user
+/calendar/events/sync
+POST
+Sync all local office hours/courses to Google Calendar
+/calendar/event
+POST
+Create a new event (class, exam, assignment)
+/calendar/event/{event_id}
+PATCH
+Update an existing Google Calendar event
+/calendar/event/{event_id}
+DELETE
+Delete an event from Google Calendar
+
+When creating an event, we’ll send:
+{
+  "title": "CSE115 Midterm Exam",
+  "start_time": "2025-07-25T10:00:00+06:00",
+  "end_time": "2025-07-25T12:00:00+06:00",
+  "location": "Room 201",
+  "event_type": "exam", 
+  "course_id": "uuid-of-course"
+}
+
+The backend will:
+ ✅ Fetch refresh_token → get access_token
+ ✅ Push to Google Calendar → return google_event_id
+
+✅ 5. Assignments & Exams
+Since Google Calendar is the source of truth, assignments & exams are also created as calendar events.
+Endpoint
+Method
+Description
+/assignments/
+GET
+List all assignment events (fetched from Google Calendar)
+/assignments/
+POST
+Add assignment → syncs to Google Calendar
+/assignments/{event_id}/complete
+PATCH
+Mark assignment as completed (optional tag in Calendar event)
+/exams/
+GET
+List all exam events (fetched from Google Calendar)
+/exams/
+POST
+Add exam → syncs to Google Calendar
+
+When marking an assignment completed, we can update Google Calendar event description with [✅ Completed].
+
+✅ 6. Search & Discovery
+Endpoint
+Method
+Description
+/search/users
+GET
+Search users by name/email → return their public info & office hours
+/search/courses
+GET
+Search by course code → return instructor & office hours
+/search/user/{email}/calendar
+GET
+Get public calendar events of a teacher/TA (only office hours, not personal events)
+
+This allows:
+Students → search for their TA/teacher → see office hours.
+
+
+Students → search a course → see who is teaching & when classes happen.
+
+
+
+✅ 7. Notifications (Optional)
+If we want extra notifications beyond Google Calendar:
+Endpoint
+Method
+Description
+/notifications/
+GET
+List pending notifications
+/notifications/mark-read
+PATCH
+Mark notifications as read
+
+But likely not needed, since Google Calendar already handles email/push reminders.
+
+✅ 8. Admin / Utility Endpoints
+Endpoint
+Method
+Description
+/admin/users
+GET
+Admin can list all users
+/admin/courses
+GET
+Admin can list all courses
+/admin/user/{id}/revoke
+POST
+Revoke Google tokens for a user
+
+This is optional for managing users if needed.
+
+✅ Summary of Feature → Endpoint Mapping
+Feature
+Endpoint(s)
+Login
+/auth/login, /auth/callback, /auth/logout
+User Profile
+/users/me, /users/me/role
+Courses
+/courses/, /courses/{id}, /courses/{id}/enroll, /courses/{id}/members
+Office Hours
+/office-hours/, /office-hours/{id}
+Google Calendar Events
+/calendar/events, /calendar/event, /calendar/event/{id}
+Assignments
+/assignments/, /assignments/{id}/complete
+Exams
+/exams/
+Search
+/search/users, /search/courses, /search/user/{email}/calendar
+Admin
+/admin/users, /admin/courses
+
+
+✅ Event Types & Color Coding
+When calling Google Calendar API:
+Classes → Green (colorId=2) → Recurring events until semester ends
+
+
+Exams → Blue (colorId=1) → Single day
+
+
+Assignments → Yellow (colorId=5) → Daily reminders until done
+
+
+Office Hours → Light Blue (colorId=7) → Weekly recurring
+
+
+
+✅ Next Step
+Would you like me to:
+1️⃣ Write sample FastAPI route implementations (e.g., /auth/callback & /calendar/event)?
+2️⃣ Or show the database schema with all these endpoints in mind (SQLAlchemy relationships)?
+3️⃣ Or design a simple JSON OpenAPI spec (Swagger) so you can see the full API structure?
+Which one do you want first?
+Got it! Let’s write a sample FastAPI endpoint to create an event in Google Calendar.
+This will:
+ ✅ Take event details (title, time, type, course, etc.)
+ ✅ Fetch the user’s stored refresh_token from DB
+ ✅ Get a fresh access_token
+ ✅ Call Google Calendar API to create the event
+ ✅ Store the google_event_id in DB for future edits/deletes
+
+✅ 1. Example Database Setup
+We’ll assume a simplified SQLAlchemy model for User & GoogleEvent:
+from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import declarative_base, relationship
+import uuid
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, nullable=False)
+    name = Column(String)
+    google_id = Column(String, nullable=False)
+    refresh_token = Column(String, nullable=False)
+
+class GoogleEvent(Base):
+    __tablename__ = "google_events"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    google_event_id = Column(String, nullable=False)  # From Google Calendar
+    event_type = Column(String, nullable=False)       # exam/class/assignment
+    created_at = Column(DateTime, server_default="NOW()")
+
+    user = relationship("User", backref="events")
+
+
+✅ 2. Google Token Refresh Helper
+When we need to create an event, we’ll refresh the access token using the stored refresh_token:
+import requests
+from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+
+def refresh_google_token(refresh_token: str) -> str:
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "refresh_token": refresh_token,
+        "grant_type": "refresh_token"
+    }
+    response = requests.post(token_url, data=data)
+    response.raise_for_status()
+    return response.json()["access_token"]
+
+
+✅ 3. Google Calendar Create Event Helper
+We’ll build the request body dynamically based on event type (class, exam, assignment):
+def create_google_calendar_event(access_token: str, event_data: dict) -> dict:
+    calendar_api_url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    event_body = {
+        "summary": event_data["title"],
+        "location": event_data.get("location", ""),
+        "description": event_data.get("description", ""),
+        "start": {
+            "dateTime": event_data["start_time"],  # e.g., 2025-07-30T10:00:00+06:00
+            "timeZone": "Asia/Dhaka"
+        },
+        "end": {
+            "dateTime": event_data["end_time"],    # e.g., 2025-07-30T12:00:00+06:00
+            "timeZone": "Asia/Dhaka"
+        },
+        "reminders": {
+            "useDefault": False,
+            "overrides": [
+                {"method": "email", "minutes": 24 * 60},  # 1-day before
+                {"method": "popup", "minutes": 30}        # 30 mins before
+            ]
+        }
+    }
+
+    # Color coding
+    color_map = {"class": "2", "exam": "1", "assignment": "5", "office_hour": "7"}
+    event_body["colorId"] = color_map.get(event_data.get("event_type", ""), "2")
+
+    response = requests.post(calendar_api_url, headers=headers, json=event_body)
+    response.raise_for_status()
+    return response.json()  # Google returns event.id, htmlLink, etc.
+
+
+✅ 4. FastAPI Route
+Now let’s put it all together with FastAPI:
+from fastapi import FastAPI, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from database import get_db
+from models import User, GoogleEvent
+
+app = FastAPI()
+
+# --- Request schema ---
+class EventRequest(BaseModel):
+    title: str
+    event_type: str  # class, exam, assignment, office_hour
+    start_time: str  # ISO format e.g. "2025-07-30T10:00:00+06:00"
+    end_time: str
+    location: str | None = None
+    description: str | None = None
+
+@app.post("/calendar/event")
+def create_calendar_event(event_req: EventRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # 1️⃣ Get user's refresh token
+    if not current_user.refresh_token:
+        raise HTTPException(401, "No Google Calendar integration found. Please login again.")
+
+    # 2️⃣ Get a fresh access token
+    access_token = refresh_google_token(current_user.refresh_token)
+
+    # 3️⃣ Call Google Calendar API
+    event_data = event_req.dict()
+    created_event = create_google_calendar_event(access_token, event_data)
+
+    # 4️⃣ Save Google event reference in DB
+    google_event_id = created_event["id"]
+    db_event = GoogleEvent(
+        user_id=current_user.id,
+        google_event_id=google_event_id,
+        event_type=event_req.event_type
+    )
+    db.add(db_event)
+    db.commit()
+
+    return {
+        "message": "Event created successfully!",
+        "google_event_id": google_event_id,
+        "calendar_link": created_event.get("htmlLink")
+    }
+
+
+✅ Example Request
+POST → /calendar/event
+{
+  "title": "CSE115 Midterm Exam",
+  "event_type": "exam",
+  "start_time": "2025-08-05T10:00:00+06:00",
+  "end_time": "2025-08-05T12:00:00+06:00",
+  "location": "Room 201",
+  "description": "Midterm Exam covering Chapters 1-5"
+}
+
+✅ Backend flow:
+Finds the user’s refresh_token
+
+
+Gets a new access_token
+
+
+Calls Google API → creates event → returns event.id
+
+
+Saves event.id in DB → so we can later edit/delete
+
+
+✅ Response from API:
+{
+  "message": "Event created successfully!",
+  "google_event_id": "7d8fj32kd923",
+  "calendar_link": "https://www.google.com/calendar/event?eid=7d8fj32kd923"
+}
+
+
+✅ Next Possible Endpoints
+Now that we have create event, we can similarly implement:
+List events: GET /calendar/events → Fetch from Google Calendar
+
+
+Update event: PATCH /calendar/event/{id} → Update Google event
+
+
+Delete event: DELETE /calendar/event/{id} → Remove from Google Calendar
+
+
+Would you like me to also:
+ ✅ Show the list events FastAPI endpoint?
+ ✅ Show update & delete event examples?
+ ✅ Or move to FastAPI /auth/callback for Google login?
+Which one should I do next?
+
+Absolutely! Here are *concise slide contents* (with titles as you listed) for your NSU scheduler project. These are structured for use in PowerPoint, Google Slides, or any slide tool—just copy-paste and tweak the formatting as needed.
+
+---
+
+---
+
+### *Slide 1: Why is it Challenging?*
+
+* Integrating multiple user roles (students, TAs, lab instructors, teachers) with different needs
+* Manual schedule entry—must be fast, intuitive, and error-proof for users
+* Seamless, privacy-conscious Google Calendar sync with granular permission control
+* Creating a real-time, searchable public directory of office hours for hundreds of staff
+* Ensuring data security, user authentication, and handling OAuth with multiple services
+* Making the system responsive, reliable, and simple for both web and mobile users
+
+---
+
+### *Slide 2: Most Prominent Related Works*
+
+* *University Portals:* Most universities use legacy portals for schedules and office hours, often lacking real-time updates and Google Calendar integration
+* *Google Calendar & Similar Apps:* Offer event management and notifications, but require manual entry and lack academic context
+* *NSU Practices:* Current system relies on physical door postings for office hours—no centralized, digital, or searchable solution
+* *Other Student Apps:* Tools like Notion or MyStudyLife provide personal scheduling but do not sync official academic events or facilitate campus-wide office hour discovery
+
+---
+
+### *Slide 3: A System Design for the Idea*
+
+*Frontend:*
+
+* React-based, responsive web app
+* User authentication via NSU email
+* Dashboard for schedule, assignments, and event management
+* Office hours directory with search/filter features
+
+*Backend:*
+
+* FastAPI for APIs and logic
+* Database for users, schedules, assignments, office hours
+* Google Calendar API integration (conditional, with user consent)
+
+---
+
+### *Slide 4: (Optional, continue System Design if needed)*
+
+*Key Flows:*
+
+* *Onboarding:* Manual schedule entry, Google Calendar permission prompt
+* *Staff/TA Portal:* Add/edit office hours, option to sync with Google Calendar
+* *Student Portal:* Search, view, and add office hours to calendar/dashboard
+* *Privacy & Security:* OAuth handling, user data protection, opt-in sync and notifications
+
+---
+
+### *Slide 5: What Will You Deliver at the End of the Semester?*
+
+* A fully functional web app where NSU users can:
+
+  * Register/login via NSU email
+  * Manually input and manage class schedules, assignments, and deadlines
+  * View, search, and filter a live office hours directory
+  * Sync selected events with Google Calendar (with permission control)
+  * Control notifications and calendar integration preferences
+
+* *Demo-ready MVP* tested with real schedules and office hours
+
+* Technical documentation and user guide
+
+---
+
+### *Slide 6: (Optional, What Will You Deliver...)*
+
+* Responsive, accessible UI/UX for both desktop and mobile
+* Secure, scalable backend ready for further features
+* Feedback from pilot users (students and staff)
+* Data privacy and security compliance for academic environments
+
+---
+
+### *Slide 7: Future Works and Conclusion*
+
+* *Future Works:*
+
+  * Mobile app version for iOS/Android
+  * Bulk schedule upload/import (CSV, OCR, etc.)
+  * Integration with other university systems (results, notices, room bookings)
+  * Advanced analytics and personalized insights
+  * Support for other campuses/universities
+
+* *Conclusion:*
+  This project streamlines NSU academic scheduling and communication, modernizes office hour discovery, and gives users full control over their data and notifications—all in a user-friendly platform.
+
+---
+
+Let me know if you want a visual diagram for the system design slide or ready-to-copy bullet points for any specific slide!
+  
+
+Here’s a detailed write-up for your *Academic Planner Portal* project, covering both the *related work review* and a *full system design* with key technical elements.
+
+---
+
+## 🔍 Part 1: Related Work (2–4 Similar Systems)
+
+---
+
+### *1. Google Calendar*
+
+* *Source:* [https://calendar.google.com](https://calendar.google.com)
+* *a. Problem Addressed:* Time management and scheduling of personal and professional events
+* *b. Approach:* A universal digital calendar allowing users to create, share, and get reminders for events
+* *c. Findings/Limitations:*
+
+  * *Strengths:* Seamless reminders, app ecosystem, powerful recurring event support
+  * *Limitations:* Not tailored to academic workflows (e.g., semester planning, assignment tracking), no course structure
+
+---
+
+### *2. Notion + Calendar Integrations*
+
+* *Source:* [https://www.notion.so](https://www.notion.so)
+* *a. Problem Addressed:* Flexible task and document management for students and teams
+* *b. Approach:* Modular block-based note system with templates for classes, assignments, and calendars
+* *c. Findings/Limitations:*
+
+  * *Strengths:* Highly customizable, good for personal workflows
+  * *Limitations:* No native calendar sync, manual effort needed to set up, no university-specific scheduling logic
+
+---
+
+### *3. myHomework Student Planner*
+
+* *Source:* [https://myhomeworkapp.com](https://myhomeworkapp.com)
+* *a. Problem Addressed:* Helping students manage classes, assignments, and tests
+* *b. Approach:* Native app for iOS, Android, and web that tracks academic tasks and deadlines
+* *c. Findings/Limitations:*
+
+  * *Strengths:* Dedicated academic planner, notifications, calendar views
+  * *Limitations:* No Google Calendar integration, limited customization, not open-source or university-specific
+
+---
+
+### *4. NSU Portal*
+
+* *Source:* [https://rds3.northsouth.edu](https://rds3.northsouth.edu)
+* *a. Problem Addressed:* Course registration, results, and academic records
+* *b. Approach:* Web-based student portal managed by NSU
+* *c. Findings/Limitations:*
+
+  * *Strengths:* Official access to course data
+  * *Limitations:* No schedule visualization, task planning, or Google Calendar integration
+
+---
+
+## 🏗️ Part 2: System Design
+
+---
+
+### *1. Problem Statement*
+
+NSU students and faculty lack an integrated, intelligent academic planner that allows managing class schedules, assignments, and office hours in a structured way — and syncs seamlessly with existing tools like Google Calendar for automated reminders and efficient time management.
+
+
+---
+
+### *2. Requirements*
+
+#### ✅ Functional Requirements
+
+* NSU-only login using Google OAuth
+* Upload or manually enter semester schedule
+* Add/edit/delete tasks and events (assignments, study blocks)
+* TA/faculty office hour scheduling
+* Google Calendar sync for events
+* Calendar dashboard view
+* Role-based access (student, TA, faculty)
+
+#### ❌ Non-Functional Requirements
+
+* Secure authentication and token handling
+* Responsive UI for desktop and mobile
+* Fast response time (<300ms for API calls)
+* Scalable for NSU student population (\~20k+ users)
+* Easy deployment (CI/CD supported)
+
+---
+
+### *3. High-Level System Architecture*
+
+#### *\[Diagram Overview]*
+
+          [Web Browser / React Frontend]
+                       |
+           [OAuth 2.0 Authentication Flow]
+                       |
+                [FastAPI Backend]
+             /         |          \
+      PostgreSQL   Google Calendar   Role Logic
+         (DB)         API          (Student/TA/Admin)
+                       |
+         [Token Storage & Sync Management]
+
+You can visualize this using a *flowchart with boxes and arrows*:
+
+* Login → Token Auth → Backend → DB + Calendar Sync
+
+---
+
+### *4. Key Modules & Their Description*
+
+| Module                   | Description                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| *User Auth Module*     | Handles Google OAuth login, restricts to @northsouth.edu, generates JWTs          |
+| *Schedule Parser*      | Parses manually inputted schedule or CSV into structured format                     |
+| *Calendar Sync Engine* | Converts assignments/events into Google Calendar API calls using stored tokens      |
+| *Event Manager*        | Add/edit/delete tasks (assignments, study blocks, office hours)                     |
+| *Dashboard UI*         | Displays user's calendar using FullCalendar.js or similar library                   |
+| *Role Manager*         | Enables different features for student, TA, or faculty (e.g., office hour creation) |
+
+---
+
+### *5. Tools and Libraries*
+
+| Component        | Technology / Library                                                     |
+| ---------------- | ------------------------------------------------------------------------ |
+| *Frontend*     | React.js / Next.js, Tailwind CSS, FullCalendar.js                        |
+| *Backend*      | FastAPI, Pydantic, SQLAlchemy                                            |
+| *Auth*         | google-auth, fastapi-login, OAuth 2.0                                |
+| *Database*     | PostgreSQL, Alembic (for migrations)                                     |
+| *Calendar API* | Google Calendar API (google-api-python-client)                         |
+| *Deployment*   | Vercel (frontend), Render or Railway (backend), Supabase or Railway (DB) |
+| *Monitoring*   | Sentry or LogRocket (optional for bugs)                                  |
+
+---
+
+Would you like me to:
+
+* *Draw the architecture diagram* visually?
+* Provide *code snippets* for Google OAuth, calendar sync, or schedule parsing?
+* Help you build a *presentation deck* based on this content?
+
+Let me know your next step!
+
+
+Here’s a *structured slide plan* for your NSU Academic Planner Portal project, based on the titles you provided. Each slide includes what *content to include*, *visual elements to show*, and *bullet points or diagrams* to use.
+
+---
+
+### 🎯 Slide 1: *Why Is It Challenging?*
+
+*Slide Title:*
+
+"Why Building an Academic Planner Is a Real Challenge"
+
+
+*Content:*
+
+* 🔐 *OAuth & Domain Restriction:* Secure Google OAuth login limited to @northsouth.edu emails.
+* 🔁 *Two-Way Calendar Sync:* Syncing with Google Calendar reliably requires handling API quotas, token refresh, and event conflicts.
+* 🧩 *Complex Scheduling Logic:* Students have overlapping classes, office hours, and deadlines — organizing them cleanly is non-trivial.
+* 🎯 *Role-Based Features:* Different logic for students, TAs, and faculty (e.g., office hour management).
+* ⚙️ *Real-Time Sync UX:* Reflecting changes made in Google Calendar back to the app dashboard (if two-way sync is enabled).
+
+*Visuals:*
+
+* An illustration of a tangled calendar
+* Icons representing Google, users, sync arrows
+
+---
+
+### 📚 Slide 2: *Most Prominent Related Works*
+
+*Slide Title:*
+
+"What Already Exists — And What They Miss"
+
+
+*Content (Comparative Table):*
+
+| Platform         | Features                         | Limitations                        |
+| ---------------- | -------------------------------- | ---------------------------------- |
+| Google Calendar  | Universal calendar tool          | No academic structure / courses    |
+| Notion / Todoist | Task management, some scheduling | Manual setup, no sync with courses |
+| NSU Portal       | View-only course info            | No interactive schedule or sync    |
+
+*Key Point:*
+
+Our project combines the academic context of NSU with the productivity features of calendar/task platforms — and integrates them automatically.
+
+
+*Visuals:*
+
+* Logos of Google Calendar, Notion, NSU Portal
+* Side-by-side feature comparison or Venn diagram
+
+---
+
+### 🧩 Slide 3–4: *System Design for the Idea*
+
+*Slide 3 Title:*
+
+"System Architecture Overview"
+
+
+*Content:*
+
+* Google OAuth Login (restricted to NSU)
+* React frontend → FastAPI backend → PostgreSQL
+* Google Calendar API integration for sync
+* Role-based routing (students, TAs, faculty)
+
+*Visuals:*
+
+* Clean *architecture diagram* showing:
+
+  * Frontend (React)
+  * Backend (FastAPI)
+  * Google Calendar API
+  * PostgreSQL DB
+  * Auth flow with OAuth 2.0
+
+---
+
+*Slide 4 Title (optional):*
+
+"Data Flow Example: From Assignment to Calendar"
+
+
+*Content:*
+
+1. Student adds an assignment via dashboard
+2. Backend stores it → sends to Google Calendar API
+3. Event appears in user's calendar
+4. Changes made in Google Calendar (optional two-way sync) are fetched on refresh
+
+*Visuals:*
+
+* Sequence diagram or numbered flow arrows
+
+---
+
+### 📦 Slide 5–6: *What Will We Deliver at the End of the Semester*
+
+*Slide 5 Title:*
+
+"Planned Deliverables (MVP)"
+
+
+*Content:*
+
+* ✅ NSU login via Google OAuth (with domain check)
+* ✅ Manual schedule upload + parsing
+* ✅ Add/view/edit academic events
+* ✅ Office hour management for faculty & TAs
+* ✅ Google Calendar sync (create events)
+
+*Visuals:*
+
+* Checkmark list with icons
+* Calendar mockup on one side
+
+---
+
+*Slide 6 Title (optional):*
+
+"Demo Highlights"
+
+
+*Content:*
+
+* 📽️ Fully functional dashboard
+* 📚 Example user flow (student uploads schedule → calendar syncs)
+* 👨‍🏫 TA creates office hours → students view and add them
+* 🔁 Real calendar integration shown live in demo
+
+*Visuals:*
+
+* Screenshots/mockups of the UI
+* Arrowed flow of demo steps
+
+---
+
+### 🚀 Slide 7: *Future Work & Conclusion*
+
+*Slide Title:*
+
+"Future Work and Final Thoughts"
+
+
+*Content:*
+*Future Work:*
+
+* 🔄 Two-way Google Calendar sync with event update detection
+* 📅 Drag-and-drop calendar editing
+* 🧠 Smart scheduling assistant (based on deadlines + free time)
+* 📲 Mobile app version (React Native)
+
+*Conclusion:*
+
+Our planner empowers NSU students to organize their semester efficiently with minimal effort, while giving staff and TAs a better way to stay accessible. Built with modern tools, our solution bridges academic structure with personal productivity.
+
+
+*Visuals:*
+
+* Roadmap or timeline showing future features
+* NSU logo + Google Calendar logo together
+
+---
+
+Would you like:
+
+* Help designing these slides in *PowerPoint / Google Slides* format?
+* Ready-made *mockups for the dashboard/calendar*?
+
+Let me know and I can generate those next.
+
+features:
+login
+logout
+signup -integrate googlecalender with it-compulsory
+upon login dashboard - googlecalender- fetched one
+on sidebaroptions
+frombackendwill fetch nsu latestacademiccalender
+will show latest academic calender
+
+UI pages
+
+login system: Login page - Otp verification - dashboard
+signup system: click on signup - - signup page - Otp verification - connect google calender - dashboard
+signup system: enter email in login page - checked email new - Otp verification - connect google calender - dashboard
+
+Login Page/signup page
+user will just enter email
+will send verification OTP to the associated email
+the system will redirect to OTP verification page
+will enter the 6 digit OTP recieved through mail
+if first time user/ during signup then system will ask for Google calender permission 
+for registered user will redirect to dashboard
+dashboard
+the integrated google calender
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Plan:
+
+User will signup with their NSU email - ends with @northsouth.edu - will check from frontend and backend - will give 411 error if email wrong
+here in signup page the user will enter their email then will send get otp request to backend using api and will be redirect to OTP verification page 
+ now as the backend will send the otp to the nsu email, the otp will be valid for 2 minutes
+ \ within 2 minutes the user will have to verify the OTP. If time expires then the user will call the resend the otp api then the backend will again send a new otp
+
+ now after they all verification the user will as signed up will intergrate with the google calendar and the google auths will be saved in the backend so that next time the user can directly see their calender in the dashboard
+ 
+
+ now in case of login the user will enter email then backend will send otp then same as signup will verify the otp then will be directed to dashboard which will contain the google calander association with this nsu email and fetched using the google auth 
+
+ 
+ now give me steps by steps procedure  in order to config the Google calendar and integrate it in the project
+ 
