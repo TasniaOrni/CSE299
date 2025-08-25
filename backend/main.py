@@ -29,8 +29,8 @@ load_dotenv()
 @app.on_event("startup")
 def on_startup():
     init_db()
-    
-DATABASE_URL = "postgresql://neondb_owner:npg_RML4fxHwkJN0@ep-holy-feather-a1xpnx0i-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+DATABASE_URL = os.getenv("DATABASE_URL")    
 engine = create_engine(DATABASE_URL, echo=True)
 
 def get_session():
